@@ -13,6 +13,10 @@ import {
   StandardMaterial,
   Mesh,
   EdgesRenderer,
+  VertexData,
+  VertexBuffer,
+  ExtrudeShape,
+  PointerDragBehavior,
 } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Control, Button } from "@babylonjs/gui";
 import earcut from "earcut";
@@ -104,10 +108,22 @@ class App {
     // light
     var light1 = new HemisphericLight(
       "light1",
-      new Vector3(1, 1, 1),
+      new Vector3(0, 0, 2),
+      this._scene
+    );
+    var light2 = new HemisphericLight(
+      "light2",
+      new Vector3(2, 0, 0),
+      this._scene
+    );
+    var light3 = new HemisphericLight(
+      "light3",
+      new Vector3(0, 2, 0),
       this._scene
     );
     light1.intensity = 0.7;
+    light2.intensity = 0.7;
+    light3.intensity = 0.7;
 
     // ground
     const ground = MeshBuilder.CreateGround(
@@ -125,11 +141,29 @@ class App {
     shapeMaterial.diffuseColor = new Color3(0, 1, 0); // Green color
 
     var shape = [[], []]; // index 0 is points, index 1 is lines
-    var lastMesh = null; // store last mesh drawn to select for extrusion process
+    var lastMesh: Mesh = null; // store last mesh drawn to select for extrusion process
+    const extrudeDepth = 1;
+    function resetShape(shape) {
+      [].concat(...shape).forEach((element: Mesh) => {
+        element.dispose();
+      });
+      return [[], []];
+    }
+    function getVerticesFromFloatArray(vertices) {
+      var uniqueVertices = [];
+      for (var i = 0; i < vertices.length; i += 3) {
+        var vertex = new Vector3(vertices[i], vertices[i + 1], vertices[i + 2]);
+        if (!uniqueVertices.some((v) => v.equals(vertex))) {
+          uniqueVertices.push(vertex);
+        }
+      }
+      return uniqueVertices;
+    }
 
     this._canvas.addEventListener("pointerdown", (evt) => {
       switch (this._state) {
         case State.DRAW:
+          ground.isPickable = true;
           if (evt.button == 0) {
             // left click
             const pickInfo = this._scene.pick(evt.clientX, evt.clientY);
@@ -175,12 +209,33 @@ class App {
               polygon.enableEdgesRendering();
               polygon.edgesWidth = 4;
               polygon.edgesColor = lineMaterial.diffuseColor.toColor4();
+              polygon.position.y = 0.00001; // lift slighly off the ground
               lastMesh = polygon;
-              shape = [[], []];
+              shape = resetShape(shape);
             }
           }
           break;
         case State.EXTRUDE:
+          shape = resetShape(shape); // remove incomplete shape
+          ground.isPickable = false;
+          const polygonVertices = getVerticesFromFloatArray(
+            lastMesh.getVerticesData(VertexBuffer.PositionKind)
+          );
+          var extrude = MeshBuilder.ExtrudePolygon(
+            "shape" + polygonVertices[0],
+            {
+              shape: polygonVertices,
+              depth: extrudeDepth,
+              updatable: true,
+              sideOrientation: Mesh.DOUBLESIDE,
+            },
+            this._scene,
+            earcut
+          );
+          extrude.material = shapeMaterial;
+          extrude.position.y += extrudeDepth;
+          lastMesh.dispose();
+          this._state = State.DRAW; // Change back to draw
           break;
 
         default:
