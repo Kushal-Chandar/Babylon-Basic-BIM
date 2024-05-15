@@ -159,6 +159,7 @@ class App {
       }
       return uniqueVertices;
     }
+    var pickedMoveMesh = null;
 
     this._canvas.addEventListener("pointerdown", (evt) => {
       switch (this._state) {
@@ -209,7 +210,7 @@ class App {
               polygon.enableEdgesRendering();
               polygon.edgesWidth = 4;
               polygon.edgesColor = lineMaterial.diffuseColor.toColor4();
-              polygon.position.y = 0.00001; // lift slighly off the ground
+              polygon.position.y += 0.00001; // lift slighly off the ground
               lastMesh = polygon;
               shape = resetShape(shape);
             }
@@ -217,7 +218,6 @@ class App {
           break;
         case State.EXTRUDE:
           shape = resetShape(shape); // remove incomplete shape
-          ground.isPickable = false;
           const polygonVertices = getVerticesFromFloatArray(
             lastMesh.getVerticesData(VertexBuffer.PositionKind)
           );
@@ -237,7 +237,28 @@ class App {
           lastMesh.dispose();
           this._state = State.DRAW; // Change back to draw
           break;
-
+        case State.MOVE:
+          ground.isPickable = false;
+          this._scene.getActiveMeshes().forEach((element) => {
+            element;
+          });
+          var pickedMesh = this._scene.pick(
+            evt.clientX,
+            evt.clientY
+          ).pickedMesh;
+          if (pickedMesh && pickedMoveMesh) {
+            pickedMoveMesh.disableEdgesRendering();
+          }
+          var pointerDragBehavior = new PointerDragBehavior({
+            dragPlaneNormal: new Vector3(0, 1, 0),
+          });
+          pointerDragBehavior.useObjectOrientationForDragging = false;
+          pickedMesh.addBehavior(pointerDragBehavior);
+          pickedMesh.enableEdgesRendering();
+          pickedMesh.edgesWidth = 4;
+          pickedMesh.position.y += 0.00001;
+          pickedMesh.edgesColor = lineMaterial.diffuseColor.toColor4();
+          pickedMoveMesh = pickedMesh;
         default:
           break;
       }
