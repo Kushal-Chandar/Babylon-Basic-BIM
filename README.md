@@ -5,6 +5,9 @@
 [![Babylon.js](https://img.shields.io/badge/Babylon.js-FA5B2A)](https://www.babylonjs.com/)
 
 Welcome to the Babylon Basic BIM project! This repository provides a basic setup to create and interact with 3D models using Babylon.js. Create shapes, extrude them, move them and edit their vertices.
+
+**Play around with it:** <https://babylon-basic-bim.vercel.app/>
+
 ![general](media/general.gif)
 
 ## Features
